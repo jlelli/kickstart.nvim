@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -248,6 +248,12 @@ rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
+  { -- A Git wrapper so awesome, it should be illegal!
+    'tpope/vim-fugitive',
+    config = function()
+      vim.keymap.set('n', '<leader>b', ':Git blame<CR>', { noremap = true })
+    end,
+  },
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -462,6 +468,20 @@ require('lazy').setup({
     end,
   },
 
+  { -- A window based AI plugin
+    'rcampos2029/GPTModels.nvim',
+    dependencies = {
+      'MunifTanjim/nui.nvim',
+      'nvim-telescope/telescope.nvim',
+    },
+    config = function()
+      vim.keymap.set('v', '<leader>a', ':GPTModelsCode<CR>', { noremap = true })
+      vim.keymap.set('n', '<leader>a', ':GPTModelsCode<CR>', { noremap = true })
+      vim.keymap.set('v', '<leader>c', ':GPTModelsChat<CR>', { noremap = true })
+      vim.keymap.set('n', '<leader>c', ':GPTModelsChat<CR>', { noremap = true })
+    end,
+  },
+
   -- LSP Plugins
   {
     -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
@@ -655,6 +675,10 @@ require('lazy').setup({
         },
       }
 
+      -- Disable diagnostic
+      -- FIXME Look at fixing clangd reported issues
+      vim.diagnostic.enable(false)
+
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
       --  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
@@ -671,7 +695,7 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {},
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
