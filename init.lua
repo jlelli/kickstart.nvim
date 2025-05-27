@@ -238,6 +238,21 @@ end
 
 vim.api.nvim_set_keymap('n', '<F7>', ':lua _G.toggle_spell_locale()<CR>', { noremap = true, silent = true })
 
+-- Git Linux Kernel tags
+vim.api.nvim_set_keymap('n', '<leader>gs', ':lua AddSignedOffBy()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>gt', ':lua AddTestedBy()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>gr', ':lua AddReviewedBy()<CR>', { noremap = true, silent = true })
+
+function AddSignedOffBy()
+  vim.api.nvim_feedkeys('oSigned-off-by: Juri Lelli <juri.lelli@redhat.com>', 'n', false)
+end
+function AddTestedBy()
+  vim.api.nvim_feedkeys('oTested-by: Juri Lelli <juri.lelli@redhat.com>', 'n', false)
+end
+function AddReviewedBy()
+  vim.api.nvim_feedkeys('oReviewed-by: Juri Lelli <juri.lelli@redhat.com>', 'n', false)
+end
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
