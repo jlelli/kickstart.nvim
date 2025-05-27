@@ -677,7 +677,7 @@ require('lazy').setup({
 
       -- Disable diagnostic
       -- FIXME Look at fixing clangd reported issues
-      vim.diagnostic.enable(false)
+      --vim.diagnostic.enable(false)
 
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
