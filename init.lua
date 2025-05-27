@@ -205,6 +205,39 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 -- vim.keymap.set("n", "<C-S-j>", "<C-w>J", { desc = "Move window to the lower" })
 -- vim.keymap.set("n", "<C-S-k>", "<C-w>K", { desc = "Move window to the upper" })
 
+-- F7 - Spell checking with multi-language support
+function _G.toggle_spell_locale()
+  local current_spelllang = vim.opt.spelllang:get()
+  local is_spell_on = vim.opt.spell:get()
+  local next_spelllang
+
+  if is_spell_on then
+    if current_spelllang[1] == 'en_us' then
+      next_spelllang = 'it'
+    elseif current_spelllang[1] == 'it' then
+      next_spelllang = '' -- Turn spell checking off
+    else
+      -- This case should ideally not happen if spell is on and it's not en_us or it,
+      -- but as a fallback, we can turn it off.
+      next_spelllang = ''
+    end
+  else
+    -- If spell checking is currently off, turn it on with en_us
+    next_spelllang = 'en_us'
+  end
+
+  if next_spelllang == '' then
+    vim.opt.spell = false
+    print 'Spell checking: OFF'
+  else
+    vim.opt.spell = true
+    vim.opt.spelllang = next_spelllang
+    print('Spell checking: ' .. next_spelllang:upper())
+  end
+end
+
+vim.api.nvim_set_keymap('n', '<F7>', ':lua _G.toggle_spell_locale()<CR>', { noremap = true, silent = true })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
