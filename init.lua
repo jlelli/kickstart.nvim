@@ -173,8 +173,8 @@ vim.o.confirm = true
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
--- Diagnostic keymaps
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+-- Optional: You might want to set initial diagnostic visibility if it's not handled elsewhere
+-- For example, to start with diagnostics off:
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -700,36 +700,55 @@ require('lazy').setup({
 
       -- Diagnostic Config
       -- See :help vim.diagnostic.Opts
-      vim.diagnostic.config {
-        severity_sort = true,
-        float = { border = 'rounded', source = 'if_many' },
-        underline = { severity = vim.diagnostic.severity.ERROR },
-        signs = vim.g.have_nerd_font and {
-          text = {
-            [vim.diagnostic.severity.ERROR] = '󰅚 ',
-            [vim.diagnostic.severity.WARN] = '󰀪 ',
-            [vim.diagnostic.severity.INFO] = '󰋽 ',
-            [vim.diagnostic.severity.HINT] = '󰌶 ',
-          },
-        } or {},
-        virtual_text = {
-          source = 'if_many',
-          spacing = 2,
-          format = function(diagnostic)
-            local diagnostic_message = {
-              [vim.diagnostic.severity.ERROR] = diagnostic.message,
-              [vim.diagnostic.severity.WARN] = diagnostic.message,
-              [vim.diagnostic.severity.INFO] = diagnostic.message,
-              [vim.diagnostic.severity.HINT] = diagnostic.message,
-            }
-            return diagnostic_message[diagnostic.severity]
-          end,
-        },
-      }
+      -- Diagnositc disabled by default (can be toggled on/off, see below)
+      vim.diagnostic.config { virtual_text = false, signs = false, underline = false }
+      vim.g.diagnostics_visible = false
 
-      -- Disable diagnostic
-      -- FIXME Look at fixing clangd reported issues
-      --vim.diagnostic.enable(false)
+      function ToggleDiagnostics()
+        if vim.g.diagnostics_visible then
+          -- Hide diagnostics by setting their display options to false
+          vim.diagnostic.config {
+            virtual_text = false,
+            signs = false,
+            underline = false,
+          }
+          vim.g.diagnostics_visible = false
+          vim.notify('LSP Diagnostics Disabled', vim.log.levels.INFO, { title = 'Neovim Diagnostics' })
+        else
+          -- Show diagnostics by setting their display options to true
+          vim.diagnostic.config {
+            severity_sort = true,
+            float = { border = 'rounded', source = 'if_many' },
+            underline = { severity = vim.diagnostic.severity.ERROR },
+            signs = vim.g.have_nerd_font and {
+              text = {
+                [vim.diagnostic.severity.ERROR] = '󰅚 ',
+                [vim.diagnostic.severity.WARN] = '󰀪 ',
+                [vim.diagnostic.severity.INFO] = '󰋽 ',
+                [vim.diagnostic.severity.HINT] = '󰌶 ',
+              },
+            } or {},
+            virtual_text = {
+              source = 'if_many',
+              spacing = 2,
+              format = function(diagnostic)
+                local diagnostic_message = {
+                  [vim.diagnostic.severity.ERROR] = diagnostic.message,
+                  [vim.diagnostic.severity.WARN] = diagnostic.message,
+                  [vim.diagnostic.severity.INFO] = diagnostic.message,
+                  [vim.diagnostic.severity.HINT] = diagnostic.message,
+                }
+                return diagnostic_message[diagnostic.severity]
+              end,
+            },
+          }
+          vim.g.diagnostics_visible = true
+          vim.notify('LSP Diagnostics Enabled', vim.log.levels.INFO, { title = 'Neovim Diagnostics' })
+        end
+      end
+
+      vim.keymap.set('n', '<leader>dd', ToggleDiagnostics, { noremap = true, silent = true, desc = 'Toggle LSP Diagnostics' })
+      vim.keymap.set('n', '<leader>dq', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
