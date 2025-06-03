@@ -257,6 +257,90 @@ function AddAckedBy()
   vim.api.nvim_feedkeys('oAcked-by: Juri Lelli <juri.lelli@redhat.com>', 'n', false)
 end
 
+-- Function to get the current Linux kernel version from the source tree
+local function get_kernel_version()
+  local cwd = vim.fn.getcwd()
+  local version_file = cwd .. '/Makefile'
+
+  -- Check if Makefile exists in the current working directory
+  if vim.fn.filereadable(version_file) == 0 then
+    -- If not, try common parent directories for kernel source
+    local found_version
+    local path_parts = vim.split(cwd, '/')
+    for i = #path_parts, 1, -1 do
+      local potential_kernel_root = table.concat(vim.list_slice(path_parts, 1, i), '/')
+      version_file = potential_kernel_root .. '/Makefile'
+      if vim.fn.filereadable(version_file) == 1 then
+        for line in io.lines(version_file) do
+          if line:match '^VERSION = (%d+)' then
+            local major = line:match '^VERSION = (%d+)'
+            for line2 in io.lines(version_file) do
+              if line2:match '^PATCHLEVEL = (%d+)' then
+                local patchlevel = line2:match '^PATCHLEVEL = (%d+)'
+                found_version = 'v' .. major .. '.' .. patchlevel
+                return found_version -- Return as soon as we find it
+              end
+            end
+          end
+        end
+      end
+    end
+  else
+    -- If Makefile exists in CWD, parse it
+    for line in io.lines(version_file) do
+      if line:match '^VERSION = (%d+)' then
+        local major = line:match '^VERSION = (%d+)'
+        for line2 in io.lines(version_file) do
+          if line2:match '^PATCHLEVEL = (%d+)' then
+            local patchlevel = line2:match '^PATCHLEVEL = (%d+)'
+            return 'v' .. major .. '.' .. patchlevel
+          end
+        end
+      end
+    end
+  end
+  return nil -- Return nil if version not found
+end
+
+-- Function to open Elixir Bootlin URL
+local function open_elixir_bootlin_url()
+  local kernel_version = get_kernel_version()
+  if not kernel_version then
+    vim.notify('Not a Linux kernel source directory or Makefile not found.', vim.log.levels.WARN)
+    return
+  end
+
+  local file_path = vim.fn.expand '%:p' -- Full path of the current file
+  local cwd = vim.fn.getcwd()
+
+  -- Ensure we are in a sub-directory of the kernel source tree
+  if not file_path:find(cwd, 1, true) then
+    vim.notify('Current file is not within the detected kernel source tree.', vim.log.levels.WARN)
+    return
+  end
+
+  -- Get the relative path from the kernel source root
+  local relative_path = file_path:sub(#cwd + 2) -- +2 to remove '/'
+  if relative_path == '' then
+    vim.notify('Cannot determine relative path to kernel source file.', vim.log.levels.WARN)
+    return
+  end
+
+  local line_number = vim.fn.line '.' -- Current line number
+
+  local url = string.format('https://elixir.bootlin.com/linux/%s/source/%s#L%d', kernel_version, relative_path, line_number)
+
+  vim.notify('Opening URL: ' .. url, vim.log.levels.INFO)
+
+  -- Open URL in default browser (using xdg-open for Linux)
+  -- You might need to adjust this for other OS (e.g., 'open' on macOS, 'start' on Windows)
+  vim.fn.system { 'xdg-open', url }
+end
+
+-- Create a keyboard shortcut
+-- For example, map <leader>lk (Linux Kernel) to open_elixir_bootlin_url
+vim.keymap.set('n', '<leader>lk', open_elixir_bootlin_url, { noremap = true, silent = true, desc = 'Open Elixir Bootlin URL for current line' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
