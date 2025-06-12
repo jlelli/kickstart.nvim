@@ -606,15 +606,16 @@ require('lazy').setup({
 
   { -- A window based AI plugin
     'rcampos2029/GPTModels.nvim',
+    branch = 'wca',
     dependencies = {
       'MunifTanjim/nui.nvim',
       'nvim-telescope/telescope.nvim',
     },
     config = function()
-      vim.keymap.set('v', '<leader>a', ':GPTModelsCode<CR>', { noremap = true })
-      vim.keymap.set('n', '<leader>a', ':GPTModelsCode<CR>', { noremap = true })
-      vim.keymap.set('v', '<leader>c', ':GPTModelsChat<CR>', { noremap = true })
-      vim.keymap.set('n', '<leader>c', ':GPTModelsChat<CR>', { noremap = true })
+      vim.keymap.set('v', '<leader>ma', ':GPTModelsCode<CR>', { noremap = true })
+      vim.keymap.set('n', '<leader>ma', ':GPTModelsCode<CR>', { noremap = true })
+      vim.keymap.set('v', '<leader>mc', ':GPTModelsChat<CR>', { noremap = true })
+      vim.keymap.set('n', '<leader>mc', ':GPTModelsChat<CR>', { noremap = true })
     end,
   },
 
