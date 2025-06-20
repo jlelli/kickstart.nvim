@@ -260,45 +260,53 @@ end
 -- Function to get the current Linux kernel version from the source tree
 local function get_kernel_version()
   local cwd = vim.fn.getcwd()
-  local version_file = cwd .. '/Makefile'
+  local version_file_path
 
-  -- Check if Makefile exists in the current working directory
-  if vim.fn.filereadable(version_file) == 0 then
-    -- If not, try common parent directories for kernel source
-    local found_version
-    local path_parts = vim.split(cwd, '/')
-    for i = #path_parts, 1, -1 do
-      local potential_kernel_root = table.concat(vim.list_slice(path_parts, 1, i), '/')
-      version_file = potential_kernel_root .. '/Makefile'
-      if vim.fn.filereadable(version_file) == 1 then
-        for line in io.lines(version_file) do
-          if line:match '^VERSION = (%d+)' then
-            local major = line:match '^VERSION = (%d+)'
-            for line2 in io.lines(version_file) do
-              if line2:match '^PATCHLEVEL = (%d+)' then
-                local patchlevel = line2:match '^PATCHLEVEL = (%d+)'
-                found_version = 'v' .. major .. '.' .. patchlevel
-                return found_version -- Return as soon as we find it
-              end
-            end
-          end
-        end
+  -- Function to parse Makefile and extract version info
+  local function parse_makefile(file_path)
+    local major, patchlevel, extraversion
+    if vim.fn.filereadable(file_path) == 0 then
+      return nil
+    end
+
+    for line in io.lines(file_path) do
+      if line:match '^VERSION = (%d+)' then
+        major = line:match '^VERSION = (%d+)'
+      elseif line:match '^PATCHLEVEL = (%d+)' then
+        patchlevel = line:match '^PATCHLEVEL = (%d+)'
+      elseif line:match '^EXTRAVERSION = (.*)$' then
+        extraversion = line:match '^EXTRAVERSION = (.*)$'
       end
     end
-  else
-    -- If Makefile exists in CWD, parse it
-    for line in io.lines(version_file) do
-      if line:match '^VERSION = (%d+)' then
-        local major = line:match '^VERSION = (%d+)'
-        for line2 in io.lines(version_file) do
-          if line2:match '^PATCHLEVEL = (%d+)' then
-            local patchlevel = line2:match '^PATCHLEVEL = (%d+)'
-            return 'v' .. major .. '.' .. patchlevel
-          end
-        end
+
+    if major and patchlevel then
+      local full_version = 'v' .. major .. '.' .. patchlevel
+      if extraversion and extraversion ~= '' then
+        full_version = full_version .. extraversion
       end
+      return full_version
+    end
+    return nil
+  end
+
+  -- Try current working directory first
+  version_file_path = cwd .. '/Makefile'
+  local version = parse_makefile(version_file_path)
+  if version then
+    return version
+  end
+
+  -- If not found in CWD, try common parent directories for kernel source
+  local path_parts = vim.split(cwd, '/')
+  for i = #path_parts, 1, -1 do
+    local potential_kernel_root = table.concat(vim.list_slice(path_parts, 1, i), '/')
+    version_file_path = potential_kernel_root .. '/Makefile'
+    version = parse_makefile(version_file_path)
+    if version then
+      return version
     end
   end
+
   return nil -- Return nil if version not found
 end
 
