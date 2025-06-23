@@ -349,6 +349,9 @@ end
 -- For example, map <leader>lk (Linux Kernel) to open_elixir_bootlin_url
 vim.keymap.set('n', '<leader>lk', open_elixir_bootlin_url, { noremap = true, silent = true, desc = 'Open Elixir Bootlin URL for current line' })
 
+-- Make CScope database (as the plugin way doesn't seem to work for the Linux kernel)
+vim.api.nvim_set_keymap('n', '<leader>cm', ':!make cscope<CR>', { noremap = true, silent = false, desc = 'Make CScope database' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
