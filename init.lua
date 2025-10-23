@@ -352,6 +352,50 @@ vim.keymap.set('n', '<leader>lk', open_elixir_bootlin_url, { noremap = true, sil
 -- Make CScope database (as the plugin way doesn't seem to work for the Linux kernel)
 vim.api.nvim_set_keymap('n', '<leader>cm', ':!make cscope<CR>', { noremap = true, silent = false, desc = 'Make CScope database' })
 
+-- Auto-restart semcode-lsp when git branch changes
+local last_git_head = {}
+
+local function get_git_head(path)
+  local git_dir = vim.fn.finddir('.git', path .. ';')
+  if git_dir == '' then
+    return nil
+  end
+  local head_file = git_dir .. '/HEAD'
+  if vim.fn.filereadable(head_file) == 1 then
+    local head = vim.fn.readfile(head_file)
+    return head[1]
+  end
+  return nil
+end
+
+local function restart_semcode_lsp_if_head_changed()
+  local cwd = vim.fn.getcwd()
+  local current_head = get_git_head(cwd)
+
+  if current_head and last_git_head[cwd] and last_git_head[cwd] ~= current_head then
+    -- HEAD changed, restart semcode-lsp
+    vim.notify(string.format('Git HEAD changed from %s to %s', last_git_head[cwd], current_head), vim.log.levels.INFO)
+    local clients = vim.lsp.get_clients({ name = 'semcode_lsp' })
+    if #clients > 0 then
+      for _, client in ipairs(clients) do
+        client.stop()
+      end
+      vim.notify('Git branch changed - restarted semcode-lsp', vim.log.levels.INFO)
+    else
+      vim.notify('Git branch changed but semcode-lsp not running', vim.log.levels.WARN)
+    end
+  end
+
+  if current_head then
+    last_git_head[cwd] = current_head
+  end
+end
+
+vim.api.nvim_create_autocmd({ 'FocusGained', 'DirChanged' }, {
+  group = vim.api.nvim_create_augroup('semcode-git-monitor', { clear = true }),
+  callback = restart_semcode_lsp_if_head_changed,
+})
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
