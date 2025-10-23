@@ -951,6 +951,34 @@ require('lazy').setup({
           end,
         },
       }
+
+      -- Configure semcode LSP for C/C++ code navigation
+      local lspconfig = require 'lspconfig'
+      local configs = require 'lspconfig.configs'
+
+      -- Define semcode-lsp if it's not already defined
+      if not configs.semcode_lsp then
+        configs.semcode_lsp = {
+          default_config = {
+            cmd = { '/home/jlelli/Work/kernel/semcode/target/release/semcode-lsp' },
+            filetypes = { 'c', 'cpp', 'cc', 'h', 'hpp' },
+            root_dir = function(fname)
+              -- Look for .semcode.db or use git root
+              return lspconfig.util.find_git_ancestor(fname) or lspconfig.util.root_pattern '.semcode.db'(fname) or vim.fn.getcwd()
+            end,
+            settings = {
+              semcode = {
+                database_path = nil, -- Uses workspace/.semcode.db by default
+              },
+            },
+          },
+        }
+      end
+
+      -- Setup the semcode LSP
+      lspconfig.semcode_lsp.setup {
+        capabilities = capabilities,
+      }
     end,
   },
 
