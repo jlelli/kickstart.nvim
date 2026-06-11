@@ -368,21 +368,80 @@ local function get_git_head(path)
   return nil
 end
 
+local function get_git_sha(path)
+  local result = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(path) .. ' rev-parse HEAD 2>/dev/null')
+  if vim.v.shell_error == 0 and #result > 0 then
+    return result[1]
+  end
+  return nil
+end
+
+local function is_commit_indexed(sha, db_path)
+  local cmd = string.format(
+    '/home/jlelli/Work/kernel/semcode/target/release/semcode --database %s is-indexed --commit %s',
+    vim.fn.shellescape(db_path),
+    vim.fn.shellescape(sha)
+  )
+  vim.fn.system(cmd)
+  return vim.v.shell_error == 0
+end
+
+local function prompt_reindex(cwd, sha)
+  local choice = vim.fn.confirm('Current commit not indexed. Re-index semcode database?', '&Yes\n&No', 2)
+  if choice == 1 then
+    vim.notify('Starting semcode index (this may take a while)...', vim.log.levels.INFO)
+    vim.fn.jobstart('semcode-index --source ' .. vim.fn.shellescape(cwd), {
+      cwd = cwd,
+      on_exit = function(_, exit_code)
+        if exit_code == 0 then
+          vim.notify('Semcode indexing completed!', vim.log.levels.INFO)
+        else
+          vim.notify('Semcode indexing failed with exit code ' .. exit_code, vim.log.levels.ERROR)
+        end
+      end,
+      on_stdout = function(_, data)
+        for _, line in ipairs(data) do
+          if line ~= '' then
+            print('semcode-index: ' .. line)
+          end
+        end
+      end,
+      on_stderr = function(_, data)
+        for _, line in ipairs(data) do
+          if line ~= '' then
+            print('semcode-index: ' .. line)
+          end
+        end
+      end,
+    })
+  end
+end
+
 local function restart_semcode_lsp_if_head_changed()
   local cwd = vim.fn.getcwd()
   local current_head = get_git_head(cwd)
 
   if current_head and last_git_head[cwd] and last_git_head[cwd] ~= current_head then
     -- HEAD changed, restart semcode-lsp
-    vim.notify(string.format('Git HEAD changed from %s to %s', last_git_head[cwd], current_head), vim.log.levels.INFO)
+    vim.notify('Git branch changed - restarted semcode-lsp', vim.log.levels.INFO)
     local clients = vim.lsp.get_clients({ name = 'semcode_lsp' })
     if #clients > 0 then
       for _, client in ipairs(clients) do
         client.stop()
       end
-      vim.notify('Git branch changed - restarted semcode-lsp', vim.log.levels.INFO)
-    else
-      vim.notify('Git branch changed but semcode-lsp not running', vim.log.levels.WARN)
+    end
+
+    -- Check if new commit is indexed
+    local sha = get_git_sha(cwd)
+    if sha then
+      local db_path = cwd .. '/.semcode.db'
+      if vim.fn.isdirectory(db_path) == 1 then
+        vim.schedule(function()
+          if not is_commit_indexed(sha, db_path) then
+            prompt_reindex(cwd, sha)
+          end
+        end)
+      end
     end
   end
 
