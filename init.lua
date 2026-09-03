@@ -1091,6 +1091,69 @@ require('lazy').setup({
       lspconfig.semcode_lsp.setup {
         capabilities = capabilities,
       }
+
+      -- Show semcode call chain for function under cursor
+      local function semcode_callchain()
+        local word = vim.fn.expand '<cword>'
+        if word == '' then
+          vim.notify('No word under cursor', vim.log.levels.WARN)
+          return
+        end
+
+        local db_path = vim.fn.getcwd() .. '/.semcode.db'
+        if vim.fn.isdirectory(db_path) == 0 then
+          vim.notify('No .semcode.db found in ' .. vim.fn.getcwd(), vim.log.levels.WARN)
+          return
+        end
+
+        local cmd = string.format(
+          '%s -d %s -q %s',
+          vim.fn.shellescape '/home/jlelli/Work/kernel/semcode/target/release/semcode',
+          vim.fn.shellescape(db_path),
+          vim.fn.shellescape('callchain ' .. word)
+        )
+
+        local output = vim.fn.systemlist(cmd)
+        for i, line in ipairs(output) do
+          output[i] = line:gsub('\27%[[%d;]*m', '')
+        end
+        if vim.v.shell_error ~= 0 or #output == 0 then
+          vim.notify('No call chain found for ' .. word, vim.log.levels.INFO)
+          return
+        end
+
+        vim.cmd 'vnew'
+        local buf = vim.api.nvim_get_current_buf()
+        vim.bo[buf].buftype = 'nofile'
+        vim.bo[buf].bufhidden = 'wipe'
+        vim.bo[buf].swapfile = false
+        vim.bo[buf].filetype = 'callchain'
+        vim.api.nvim_buf_set_name(buf, 'callchain: ' .. word)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, output)
+        vim.bo[buf].modifiable = false
+        vim.keymap.set('n', 'q', '<cmd>close<CR>', { buffer = buf, silent = true })
+
+        local function jump_to_location()
+          local lines_to_check = {
+            vim.api.nvim_get_current_line(),
+            vim.fn.getline(vim.fn.line '.' + 1),
+          }
+          for _, line in ipairs(lines_to_check) do
+            local file, lnum = line:match '%(([^:%(%)]+):(%d+)%)'
+            if file and lnum then
+              vim.cmd 'wincmd p'
+              vim.cmd('edit ' .. vim.fn.fnameescape(file))
+              vim.api.nvim_win_set_cursor(0, { tonumber(lnum), 0 })
+              return
+            end
+          end
+          vim.notify('No file:line reference found', vim.log.levels.INFO)
+        end
+
+        vim.keymap.set('n', 'gd', jump_to_location, { buffer = buf, silent = true, desc = 'Jump to function location' })
+      end
+
+      vim.keymap.set('n', 'grc', semcode_callchain, { desc = 'Semcode [C]all chain for word under cursor' })
     end,
   },
 
